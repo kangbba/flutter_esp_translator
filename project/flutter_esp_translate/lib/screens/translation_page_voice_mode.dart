@@ -1,8 +1,10 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'package:flutter_esp_translate/translate/translate_languages.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
@@ -148,7 +150,6 @@ class _TranslatePageVoiceModeState extends State<TranslatePageVoiceMode> {
     return Column(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
-        // 첫 번째 버튼: AudioDeviceService.getConnectedAudioDevicesByPrefixAndType 호출
         ElevatedButton(
           onPressed: () async {
             try {
@@ -160,10 +161,8 @@ class _TranslatePageVoiceModeState extends State<TranslatePageVoiceMode> {
               print('Error setting audio route to ESP HFP: $e');
             }
           },
-          child: Text('Set ESP HFP'),
+          child: Text('단말기 라우팅'),
         ),
-
-        // 두 번째 버튼: AudioDeviceService.setAudioRouteMobile 호출
         ElevatedButton(
           onPressed: () async {
             try {
@@ -172,26 +171,40 @@ class _TranslatePageVoiceModeState extends State<TranslatePageVoiceMode> {
               print('Error setting audio route to Mobile: $e');
             }
           },
-          child: Text('Set Mobile'),
+          child: Text('모바일 라우팅'),
         ),
-
-        // 세 번째 버튼: 내용 없음 (추후 추가)
-        ElevatedButton(
-          onPressed: () {
-            // 여기에 기능 추가 예정
-          },
-          child: Text('Empty Button'),
-        ),
-
-        // 네 번째 버튼: speakWithLanguage 호출
         ElevatedButton(
           onPressed: () async {
-            textToSpeechControl.speakWithLanguage("Hello, this is a test speech.", "en-US");
+            //   textToSpeechControl.speakWithLanguage("Hello, this is a test speech.", "en_US");
+            textToSpeechControl.speakWithLanguage("성공은 한 번의 거대한 노력의 결과가 아니라, 날마다 꾸준히 긍정적인 행동을 실천한 결과물입니다. 매일 아침 새롭게 다가오는 하루에 의미를 부여하고, 작은 진보라도 착실히 쌓아가겠다는 결심을 통해 만들어집니다.", "ko_KR");
           },
-          child: Text('Speak'),
+          child: Text("수정전 긴 문장 말하기"),
         ),
+        ElevatedButton(
+          onPressed: () async{
+            List<AudioDevice> allConnectedAudioDevices = await AudioDeviceService.getConnectedAudioDevicesByPrefixAndType(PRODUCT_PREFIX, 7);
+            String targetDeviceName = allConnectedAudioDevices.isEmpty ? "" : allConnectedAudioDevices[0].name;
+            // 여기에 기능 추가 예정
+            speakWithRouteRequest(
+                targetDeviceName,
+                "성공은 한 번의 거대한 노력의 결과가 아니라, 날마다 꾸준히 긍정적인 행동을 실천한 결과물입니다. 매일 아침 새롭게 다가오는 하루에 의미를 부여하고, 작은 진보라도 착실히 쌓아가겠다는 결심을 통해 만들어집니다. ",
+                languageControl.findLanguageItemByTranslateLanguage(TranslateLanguage.korean)!
+            );
+          },
+          child: Text("수정된 긴 문장 말하기"),
+        ),
+
       ],
     );
+  }
+  int getCurrentSdkInt() {
+    if (Platform.isAndroid) {
+      int sdkInt = int.parse(Platform.version.split(' ').first);
+      debugLog(sdkInt);
+      return sdkInt;
+    } else {
+      throw UnsupportedError('This function is only available on Android.');
+    }
   }
   Widget languageMenuAndRecordingBtn(BuildContext context, LanguageControl languageControl, bool isMine) {
     return Column(
@@ -375,25 +388,29 @@ class _TranslatePageVoiceModeState extends State<TranslatePageVoiceMode> {
         }
       }
 
-      //write datas to ble device
+
+      //BLE 디바이스 연결
       simpleLoadingDialog(context, "Connecting to $targetDeviceName");
       await BluetoothDeviceService.connectToDevice(bleDevice);
       if(mounted){
         Navigator.of(context).pop();
       }
-
-      //set audio route for speak
-      if (isMine) {
-        AudioDeviceService.setAudioRouteMobile();
-      }
-      else {
-        AudioDeviceService.setAudioRouteESPHFP(targetDeviceName);
-      }
+      await Future.delayed(const Duration(milliseconds: 500));
     }
 
-    //perform speech to text
+    //말하기를 위한 라우팅 제어
+    if (isMine) {
+      AudioDeviceService.setAudioRouteMobile();
+    }
+    else {
+      AudioDeviceService.setAudioRouteESPHFP(targetDeviceName);
+    }
+
+    //음성인식 시작
     textToSpeechControl.changeLanguage(isMine ? languageControl.nowYourLanguageItem.speechLocaleId : languageControl.nowMyLanguageItem.speechLocaleId);
     String speechStr = await showVoicePopUp(btnOwner);
+
+    //음성인식 완료 처리
     if (speechStr.isEmpty) {
       onExitFromActingRoutine();
       return;
@@ -405,7 +422,7 @@ class _TranslatePageVoiceModeState extends State<TranslatePageVoiceMode> {
     }
     setState(() {});
 
-    //perform translation
+    //해석 수행
     bool succeed = await translateWithNowStatus(isMine);
     if (!succeed) {
       onExitFromActingRoutine();
@@ -413,17 +430,16 @@ class _TranslatePageVoiceModeState extends State<TranslatePageVoiceMode> {
     }
     setState(() {});
 
-
-    //set audio route
+    //해석한 내용을 스피커로 출력
     if(!useTranslationOnly){
       if (isMine) {
         AudioDeviceService.setAudioRouteESPHFP(targetDeviceName);
       } else {
         AudioDeviceService.setAudioRouteMobile();
       }
-      await Future.delayed(const Duration(milliseconds: 1500));
+      await Future.delayed(const Duration(milliseconds: 500));
 
-      //send translated data to ble device
+      //BLE 디바이스로 전송
       String translatedStr = languageControl.yourStr.trim();
       List<int> msgBytes = utf8.encode(translatedStr);
       debugLog("*MSG DATA LENGTH : ${msgBytes.length}");
@@ -437,15 +453,24 @@ class _TranslatePageVoiceModeState extends State<TranslatePageVoiceMode> {
       String truncatedStr = utf8.decode(truncatedBytes);
       String fullMsgToSend = "${targetLanguageItem.uniqueId}:$truncatedStr;";
       await BluetoothDeviceService.writeMsgToBleDevice(bleDevice, fullMsgToSend);
+      await Future.delayed(const Duration(milliseconds: 500));
     }
 
     //perform text to speech
     String strToSpeech = isMine ? languageControl.yourStr : languageControl.myStr;
     LanguageItem toLangItem = isMine ? languageControl.nowYourLanguageItem : languageControl.nowMyLanguageItem;
     if(!useTranslationOnly){
-      await speakWithRouteRequest(targetDeviceName, strToSpeech, toLangItem, isMine);
+      if(isMine && getCurrentSdkInt() >= 34){
+        debugLog("수정된 긴 문장 말하기 SDK : ${getCurrentSdkInt()}");
+        await speakWithRouteRequest(targetDeviceName, strToSpeech, toLangItem);
+      }
+      else{
+        debugLog("그냥 말하기");
+        await textToSpeechControl.speakWithLanguage(strToSpeech.trim(), toLangItem.speechLocaleId);
+      }
     }
     else{
+      debugLog("그냥 말하기");
       await textToSpeechControl.speakWithLanguage(strToSpeech.trim(), toLangItem.speechLocaleId);
     }
     isRoutinePlaying = false;
@@ -460,7 +485,7 @@ class _TranslatePageVoiceModeState extends State<TranslatePageVoiceMode> {
     }
   }
 
-  Future<void> speakWithRouteRequest(String targetDeviceName, String strToSpeech, LanguageItem toLangItem, bool isMine) async{
+  Future<void> speakWithRouteRequest(String targetDeviceName, String strToSpeech, LanguageItem toLangItem) async{
     // 정규식을 이용하여 '.', ',', '?', '!' 기준으로 텍스트 분리
     int maxWordsPerSegment = 15; // 단어 수를 관리하는 변수
     double delayBetweenWords = 10.0; // 단어 수 사이의 딜레이
@@ -480,9 +505,7 @@ class _TranslatePageVoiceModeState extends State<TranslatePageVoiceMode> {
         // 단어 수가 maxWordsPerSegment 이하일 경우 그대로 출력
         if (words.length <= maxWordsPerSegment) {
           sentenceCount++;
-          if (isMine) {
-            AudioDeviceService.setAudioRouteESPHFP(targetDeviceName);
-          }
+          AudioDeviceService.setAudioRouteESPHFP(targetDeviceName);
           await Future.delayed(Duration(milliseconds: delayBetweenSentences.toInt()));
           await textToSpeechControl.speakWithLanguage(sentence.trim(), toLangItem.speechLocaleId);
         } else {
@@ -501,9 +524,7 @@ class _TranslatePageVoiceModeState extends State<TranslatePageVoiceMode> {
                 debugLog("현재 문장 길이 : ${partialSentence.length}");
                 debugLog('Processing sentence $sentenceCount: $partialSentence');
 
-                if (isMine) {
-                  AudioDeviceService.setAudioRouteESPHFP(targetDeviceName);
-                }
+                AudioDeviceService.setAudioRouteESPHFP(targetDeviceName);
                 await Future.delayed(Duration(milliseconds: delayBetweenWords.toInt()));
 
                 await textToSpeechControl.speakWithLanguage(partialSentence, toLangItem.speechLocaleId);
@@ -513,9 +534,6 @@ class _TranslatePageVoiceModeState extends State<TranslatePageVoiceMode> {
               }
             }
           }
-        }
-        if (isMine) {
-          AudioDeviceService.setAudioRouteESPHFP(targetDeviceName);
         }
         await Future.delayed(Duration(milliseconds: delayBetweenSentences.toInt()));
       }
