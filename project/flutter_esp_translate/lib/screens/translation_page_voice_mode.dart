@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
@@ -54,7 +55,9 @@ class _TranslatePageVoiceModeState extends State<TranslatePageVoiceMode> {
   TextToSpeechControl textToSpeechControl = TextToSpeechControl.getInstance();
   TranslateControl translateControl = TranslateControl.getInstance();
   final bool autoSwitchSpeaker = true;
+  final bool isRoutingTest = false;
   int voiceTranslatingCounter = 0;
+
 
   @override
   void initState() {
@@ -138,7 +141,8 @@ class _TranslatePageVoiceModeState extends State<TranslatePageVoiceMode> {
                   ],
                 ),
               ),
-              buildAudioControlRow(),
+              if(isRoutingTest)
+                buildAudioControlRow(),
             ],
           );
         },
@@ -197,14 +201,10 @@ class _TranslatePageVoiceModeState extends State<TranslatePageVoiceMode> {
       ],
     );
   }
-  int getCurrentSdkInt() {
-    if (Platform.isAndroid) {
-      int sdkInt = int.parse(Platform.version.split(' ').first);
-      debugLog(sdkInt);
-      return sdkInt;
-    } else {
-      throw UnsupportedError('This function is only available on Android.');
-    }
+  Future<int> getCurrentSdkInt() async {
+    DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
+    AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
+    return androidInfo.version.sdkInt;
   }
   Widget languageMenuAndRecordingBtn(BuildContext context, LanguageControl languageControl, bool isMine) {
     return Column(
@@ -341,7 +341,7 @@ class _TranslatePageVoiceModeState extends State<TranslatePageVoiceMode> {
   onPressedRecordingBtn(LanguageControl languageControl, ActingOwner btnOwner) async {
 
     //Presetting
-    textToSpeechControl.stop();
+    textToSpeechControl.pause();
     bool isConditionReady = await allConditionCheck();
     if (!isConditionReady) {
       onExitFromActingRoutine();
@@ -460,9 +460,15 @@ class _TranslatePageVoiceModeState extends State<TranslatePageVoiceMode> {
     String strToSpeech = isMine ? languageControl.yourStr : languageControl.myStr;
     LanguageItem toLangItem = isMine ? languageControl.nowYourLanguageItem : languageControl.nowMyLanguageItem;
     if(!useTranslationOnly){
-      if(isMine && getCurrentSdkInt() >= 34){
-        debugLog("수정된 긴 문장 말하기 SDK : ${getCurrentSdkInt()}");
-        await speakWithRouteRequest(targetDeviceName, strToSpeech, toLangItem);
+      if(isMine){
+        int sdkInt = await getCurrentSdkInt();
+        debugLog("수정된 긴 문장 말하기 SDK : ${sdkInt}");
+        if(sdkInt >= 34){
+          await speakWithRouteRequest(targetDeviceName, strToSpeech, toLangItem);
+        }
+        else{
+          await textToSpeechControl.speakWithLanguage(strToSpeech.trim(), toLangItem.speechLocaleId);
+        }
       }
       else{
         debugLog("그냥 말하기");

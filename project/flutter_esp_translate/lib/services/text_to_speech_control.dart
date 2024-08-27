@@ -29,12 +29,16 @@ class TextToSpeechControl extends ChangeNotifier{
     String manipulatedLangCode = "${separated[0]}-${separated[1]}";
     await flutterTts.setLanguage(manipulatedLangCode);
   }
-
   Future<void> speakWithLanguage(String str, String langCode) async {
+    int? maxLength = await flutterTts.getMaxSpeechInputLength;
+    debugLog("speakWithLanguage :: ${maxLength ?? ''}");
     await changeLanguage(langCode);
     await flutterTts.speak(str);
     await flutterTts.awaitSpeakCompletion(true);
     debugLog("말하기 끝");
+  }
+  Future<void> pause() async {
+    await flutterTts.pause();
   }
   Future<void> stop() async {
     await flutterTts.stop();
