@@ -39,10 +39,11 @@ class TranslatePageVoiceMode extends StatefulWidget {
 
 ActingOwner nowActingOwner = ActingOwner.nobody;
 bool isRoutinePlaying = false;
-
+bool isTesting = false;
 DataControl dataControl = DataControl.getInstance();
 
 const double micHeight = 30;
+
 
 class _TranslatePageVoiceModeState extends State<TranslatePageVoiceMode> {
 
@@ -135,10 +136,61 @@ class _TranslatePageVoiceModeState extends State<TranslatePageVoiceMode> {
                   ],
                 ),
               ),
+              buildAudioControlRow(),
             ],
           );
         },
       ),
+    );
+  }
+
+  Widget buildAudioControlRow() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: [
+        // 첫 번째 버튼: AudioDeviceService.getConnectedAudioDevicesByPrefixAndType 호출
+        ElevatedButton(
+          onPressed: () async {
+            try {
+              List<AudioDevice> allConnectedAudioDevices = await AudioDeviceService.getConnectedAudioDevicesByPrefixAndType(PRODUCT_PREFIX, 7);
+              String targetDeviceName = allConnectedAudioDevices.isEmpty ? "" : allConnectedAudioDevices[0].name;
+              AudioDeviceService.setAudioRouteESPHFP(targetDeviceName);
+              print('Audio route set to ESP HFP for device: $targetDeviceName');
+            } catch (e) {
+              print('Error setting audio route to ESP HFP: $e');
+            }
+          },
+          child: Text('Set ESP HFP'),
+        ),
+
+        // 두 번째 버튼: AudioDeviceService.setAudioRouteMobile 호출
+        ElevatedButton(
+          onPressed: () async {
+            try {
+              AudioDeviceService.setAudioRouteMobile();
+            } catch (e) {
+              print('Error setting audio route to Mobile: $e');
+            }
+          },
+          child: Text('Set Mobile'),
+        ),
+
+        // 세 번째 버튼: 내용 없음 (추후 추가)
+        ElevatedButton(
+          onPressed: () {
+            // 여기에 기능 추가 예정
+          },
+          child: Text('Empty Button'),
+        ),
+
+        // 네 번째 버튼: speakWithLanguage 호출
+        ElevatedButton(
+          onPressed: () async {
+            textToSpeechControl.speakWithLanguage("Hello, this is a test speech.", "en-US");
+          },
+          child: Text('Speak'),
+        ),
+      ],
     );
   }
   Widget languageMenuAndRecordingBtn(BuildContext context, LanguageControl languageControl, bool isMine) {
@@ -495,4 +547,6 @@ class _TranslatePageVoiceModeState extends State<TranslatePageVoiceMode> {
       setState(() {});
     }
   }
+
+
 }

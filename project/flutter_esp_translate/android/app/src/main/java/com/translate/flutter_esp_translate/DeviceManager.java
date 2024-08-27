@@ -1,4 +1,4 @@
-package com.example.v3bangawer;
+package com.translate.flutter_esp_translate;
 
 import android.annotation.TargetApi;
 import android.bluetooth.BluetoothA2dp;
@@ -128,7 +128,7 @@ public class DeviceManager {
             System.out.println("Attempting to set audio route to built-in speaker: Device ID: " + selectedDevice.getId());
             audioManager.stopBluetoothSco();
             audioManager.setMode(AudioManager.MODE_NORMAL);
-            audioManager.setSpeakerphoneOn(true);
+            audioManager.setSpeakerphoneOn(false);
             audioManager.setCommunicationDevice(selectedDevice);
             System.out.println("Audio route successfully set to " + selectedDevice.getProductName());
             return true;

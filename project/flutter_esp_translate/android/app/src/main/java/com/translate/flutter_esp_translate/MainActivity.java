@@ -1,4 +1,4 @@
-package com.example.v3bangawer;
+package com.translate.flutter_esp_translate;
 
 import android.os.Build;
 import android.os.Bundle;
