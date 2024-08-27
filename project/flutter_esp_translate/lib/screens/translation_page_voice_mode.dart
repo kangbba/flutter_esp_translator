@@ -6,7 +6,7 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
-import 'package:v3bangawer/secrets/secret_device_keys.dart';
+import '../secrets/secret_device_keys.dart';
 import '../screens/speech_recognition_popup.dart';
 import '../devices/audio_device_info.dart';
 import '../languages/language_control.dart';
