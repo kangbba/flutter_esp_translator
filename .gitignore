@@ -26,3 +26,4 @@ doc/api/
 .flutter-plugins
 .flutter-plugins-dependencies
 /project/flutter_esp_translator/lib/secrets
+/project/flutter_esp_translate/lib/secrets
