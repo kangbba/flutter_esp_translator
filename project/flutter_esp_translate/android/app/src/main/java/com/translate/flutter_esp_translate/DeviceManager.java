@@ -12,8 +12,11 @@ import android.content.pm.PackageManager;
 import android.media.AudioAttributes;
 import android.media.AudioDeviceCallback;
 import android.media.AudioDeviceInfo;
+import android.media.AudioFocusRequest;
 import android.media.AudioFormat;
 import android.media.AudioManager;
+import android.media.MediaPlayer;
+import android.media.MediaRecorder;
 import android.media.MicrophoneInfo;
 import android.os.Build;
 import android.util.Log;
@@ -36,9 +39,11 @@ import io.flutter.plugin.common.MethodChannel;
 public class DeviceManager {
     private final AudioManager audioManager;
     private static final String CHANNEL = "samples.flutter.dev/audio";
+    private Context context;
 
-    @TargetApi(Build.VERSION_CODES.S)
+    @RequiresApi(Build.VERSION_CODES.S)
     public DeviceManager(Context context) {
+        this.context = context;
         this.audioManager = (AudioManager) context.getSystemService(AUDIO_SERVICE);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             audioManager.registerAudioDeviceCallback(new AudioDeviceCallback() {
@@ -48,7 +53,6 @@ public class DeviceManager {
                         Log.d("AudioDeviceCallback", "Audio device added: " + device.getProductName());
                     }
                 }
-
                 @Override
                 public void onAudioDevicesRemoved(AudioDeviceInfo[] removedDevices) {
                     for (AudioDeviceInfo device : removedDevices) {
@@ -59,7 +63,7 @@ public class DeviceManager {
         }
     }
 
-    @TargetApi(Build.VERSION_CODES.S)
+    @RequiresApi(Build.VERSION_CODES.S)
     public void configureFlutterEngine(FlutterEngine flutterEngine) {
         new MethodChannel(flutterEngine.getDartExecutor().getBinaryMessenger(), CHANNEL).setMethodCallHandler((call, result) -> {
             switch (call.method) {
@@ -97,7 +101,7 @@ public class DeviceManager {
     }
 
 
-    @TargetApi(Build.VERSION_CODES.S)
+    @RequiresApi(Build.VERSION_CODES.S)
     private List<Map<String, Object>> getConnectedAudioDevices() {
         AudioDeviceInfo[] devices = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS);
         List<Map<String, Object>> deviceList = new ArrayList<>();
@@ -120,7 +124,7 @@ public class DeviceManager {
         return deviceList;
     }
 
-    @TargetApi(Build.VERSION_CODES.S)
+    @RequiresApi(Build.VERSION_CODES.S)
     public boolean setAudioRouteMobile() {
         AudioDeviceInfo[] outputDevices = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS);
 
@@ -149,7 +153,7 @@ public class DeviceManager {
         }
     }
 
-    @TargetApi(Build.VERSION_CODES.S)
+    @RequiresApi(Build.VERSION_CODES.S)
     public boolean setAudioRouteESPHFP(String deviceName) {
         AudioDeviceInfo[] outputDevices = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS);
 
@@ -169,6 +173,7 @@ public class DeviceManager {
             System.out.println("Attempting to set audio route to device " + deviceName + ": Device ID: " + selectedDevice.getId());
             audioManager.startBluetoothSco();
             audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
+
             audioManager.setSpeakerphoneOn(false); // call AFTER setMode
             audioManager.setCommunicationDevice(selectedDevice);
             System.out.println("Audio route successfully set to " + selectedDevice.getProductName());
@@ -179,9 +184,9 @@ public class DeviceManager {
         }
     }
 
-    @TargetApi(Build.VERSION_CODES.S)
+    @RequiresApi(Build.VERSION_CODES.S)
     private boolean isCurrentRouteESPHFP(String deviceName) {
-        AudioManager audioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
+        AudioManager audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
         AudioDeviceInfo currentDevice = audioManager.getCommunicationDevice();
 
         if (currentDevice != null && currentDevice.getProductName().equals(deviceName)
@@ -193,4 +198,5 @@ public class DeviceManager {
             return false;
         }
     }
+
 }

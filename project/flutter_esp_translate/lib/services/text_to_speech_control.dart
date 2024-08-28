@@ -56,6 +56,10 @@ class TextToSpeechControl extends ChangeNotifier{
       // 현재 라우팅된 오디오 기기가 ESPHFP인지 확인
       bool isESPHFP = await AudioDeviceService.isCurrentRouteESPHFP(targetDeviceName);
       debugLog('현재 라우트가 ESPHFP인지 확인: $isESPHFP');
+      if(!isESPHFP){
+        AudioDeviceService.setAudioRouteESPHFP(targetDeviceName);
+        await speakWithLanguage(strToSpeech.trim(), toLangItem.speechLocaleId);
+      }
     });
 
     // 텍스트를 말하기 시작

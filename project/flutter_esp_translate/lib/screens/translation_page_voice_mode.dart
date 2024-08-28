@@ -445,12 +445,6 @@ class _TranslatePageVoiceModeState extends State<TranslatePageVoiceMode> {
 
     //해석한 내용을 스피커로 출력
     if(!useTranslationOnly){
-      if (isMine) {
-        AudioDeviceService.setAudioRouteESPHFP(targetDeviceName);
-      } else {
-        AudioDeviceService.setAudioRouteMobile();
-      }
-      await Future.delayed(const Duration(milliseconds: 500));
 
       //BLE 디바이스로 전송
       String translatedStr = languageControl.yourStr.trim();
@@ -466,6 +460,13 @@ class _TranslatePageVoiceModeState extends State<TranslatePageVoiceMode> {
       String truncatedStr = utf8.decode(truncatedBytes);
       String fullMsgToSend = "${targetLanguageItem.uniqueId}:$truncatedStr;";
       await BluetoothDeviceService.writeMsgToBleDevice(bleDevice, fullMsgToSend);
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      if (isMine) {
+        AudioDeviceService.setAudioRouteESPHFP(targetDeviceName);
+      } else {
+        AudioDeviceService.setAudioRouteMobile();
+      }
       await Future.delayed(const Duration(milliseconds: 500));
     }
 
