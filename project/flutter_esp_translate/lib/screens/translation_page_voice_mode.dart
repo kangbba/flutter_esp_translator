@@ -55,7 +55,7 @@ class _TranslatePageVoiceModeState extends State<TranslatePageVoiceMode> {
   TextToSpeechControl textToSpeechControl = TextToSpeechControl.getInstance();
   TranslateControl translateControl = TranslateControl.getInstance();
   final bool autoSwitchSpeaker = true;
-  final bool isRoutingTest = false;
+  final bool isRoutingTest = true;
   int voiceTranslatingCounter = 0;
 
 
@@ -189,13 +189,26 @@ class _TranslatePageVoiceModeState extends State<TranslatePageVoiceMode> {
             List<AudioDevice> allConnectedAudioDevices = await AudioDeviceService.getConnectedAudioDevicesByPrefixAndType(PRODUCT_PREFIX, 7);
             String targetDeviceName = allConnectedAudioDevices.isEmpty ? "" : allConnectedAudioDevices[0].name;
             // 여기에 기능 추가 예정
-            speakWithRouteRequest(
+            textToSpeechControl.speakWithRouteRequest(
                 targetDeviceName,
                 "성공은 한 번의 거대한 노력의 결과가 아니라, 날마다 꾸준히 긍정적인 행동을 실천한 결과물입니다. 매일 아침 새롭게 다가오는 하루에 의미를 부여하고, 작은 진보라도 착실히 쌓아가겠다는 결심을 통해 만들어집니다. ",
                 languageControl.findLanguageItemByTranslateLanguage(TranslateLanguage.korean)!
             );
           },
-          child: Text("수정된 긴 문장 말하기"),
+          child: Text("수정후 긴 문장 말하기"),
+        ),
+        ElevatedButton(
+          onPressed: () async{
+            List<AudioDevice> allConnectedAudioDevices = await AudioDeviceService.getConnectedAudioDevicesByPrefixAndType(PRODUCT_PREFIX, 7);
+            String targetDeviceName = allConnectedAudioDevices.isEmpty ? "" : allConnectedAudioDevices[0].name;
+            // 여기에 기능 추가 예정
+            textToSpeechControl.speakWithRouteRequest2(
+                targetDeviceName,
+                "성공은 한 번의 거대한 노력의 결과가 아니라, 날마다 꾸준히 긍정적인 행동을 실천한 결과물입니다. 매일 아침 새롭게 다가오는 하루에 의미를 부여하고, 작은 진보라도 착실히 쌓아가겠다는 결심을 통해 만들어집니다. ",
+                languageControl.findLanguageItemByTranslateLanguage(TranslateLanguage.korean)!
+            );
+          },
+          child: Text("수정후 긴 문장 말하기2"),
         ),
 
       ],
@@ -464,7 +477,7 @@ class _TranslatePageVoiceModeState extends State<TranslatePageVoiceMode> {
         int sdkInt = await getCurrentSdkInt();
         debugLog("수정된 긴 문장 말하기 SDK : ${sdkInt}");
         if(sdkInt >= 34){
-          await speakWithRouteRequest(targetDeviceName, strToSpeech, toLangItem);
+          await textToSpeechControl.speakWithRouteRequest(targetDeviceName, strToSpeech, toLangItem);
         }
         else{
           await textToSpeechControl.speakWithLanguage(strToSpeech.trim(), toLangItem.speechLocaleId);
@@ -488,61 +501,6 @@ class _TranslatePageVoiceModeState extends State<TranslatePageVoiceMode> {
           onPressedRecordingBtn(languageControl, btnOwner == ActingOwner.me ? ActingOwner.you : ActingOwner.me);
         }
       });
-    }
-  }
-
-  Future<void> speakWithRouteRequest(String targetDeviceName, String strToSpeech, LanguageItem toLangItem) async{
-    // 정규식을 이용하여 '.', ',', '?', '!' 기준으로 텍스트 분리
-    int maxWordsPerSegment = 15; // 단어 수를 관리하는 변수
-    double delayBetweenWords = 10.0; // 단어 수 사이의 딜레이
-    double delayBetweenSentences = 100.0; // 문장 간 딜레이
-
-    // 정규식을 이용하여 '.', ',', '?', '!', ':' 기준으로 텍스트 분리
-    RegExp regExp = RegExp(r'[.?!:。？！：，；]');
-    List<String> sentences = strToSpeech.split(regExp);
-
-    int sentenceCount = 0;
-
-    for (String sentence in sentences) {
-      if (sentence.trim().isNotEmpty) {
-        // 문장을 공백을 기준으로 단어 리스트로 분리
-        List<String> words = sentence.trim().split(' ');
-
-        // 단어 수가 maxWordsPerSegment 이하일 경우 그대로 출력
-        if (words.length <= maxWordsPerSegment) {
-          sentenceCount++;
-          AudioDeviceService.setAudioRouteESPHFP(targetDeviceName);
-          await Future.delayed(Duration(milliseconds: delayBetweenSentences.toInt()));
-          await textToSpeechControl.speakWithLanguage(sentence.trim(), toLangItem.speechLocaleId);
-        } else {
-          // 단어 수가 maxWordsPerSegment 이상일 경우 maxWordsPerSegment 단위로 나눠서 처리
-          StringBuffer sentenceBuffer = StringBuffer();
-
-          for (int i = 0; i < words.length; i++) {
-            sentenceBuffer.write(words[i]);
-            sentenceBuffer.write(' '); // 단어 사이에 공백 추가
-
-            // maxWordsPerSegment 개의 단어마다 문장 처리
-            if ((i + 1) % maxWordsPerSegment == 0 || i == words.length - 1) {
-              String partialSentence = sentenceBuffer.toString().trim();
-              if (partialSentence.isNotEmpty) {
-                sentenceCount++;
-                debugLog("현재 문장 길이 : ${partialSentence.length}");
-                debugLog('Processing sentence $sentenceCount: $partialSentence');
-
-                AudioDeviceService.setAudioRouteESPHFP(targetDeviceName);
-                await Future.delayed(Duration(milliseconds: delayBetweenWords.toInt()));
-
-                await textToSpeechControl.speakWithLanguage(partialSentence, toLangItem.speechLocaleId);
-
-                // 버퍼 초기화
-                sentenceBuffer.clear();
-              }
-            }
-          }
-        }
-        await Future.delayed(Duration(milliseconds: delayBetweenSentences.toInt()));
-      }
     }
   }
   Future<bool> translateWithNowStatus(bool isMine) async {

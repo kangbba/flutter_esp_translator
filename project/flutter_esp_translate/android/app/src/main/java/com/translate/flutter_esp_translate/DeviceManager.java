@@ -1,5 +1,7 @@
 package com.translate.flutter_esp_translate;
 
+import static android.content.Context.AUDIO_SERVICE;
+
 import android.annotation.TargetApi;
 import android.bluetooth.BluetoothA2dp;
 import android.bluetooth.BluetoothAdapter;
@@ -35,9 +37,9 @@ public class DeviceManager {
     private final AudioManager audioManager;
     private static final String CHANNEL = "samples.flutter.dev/audio";
 
-    @TargetApi(Build.VERSION_CODES.M)
+    @TargetApi(Build.VERSION_CODES.S)
     public DeviceManager(Context context) {
-        this.audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
+        this.audioManager = (AudioManager) context.getSystemService(AUDIO_SERVICE);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             audioManager.registerAudioDeviceCallback(new AudioDeviceCallback() {
                 @Override
@@ -57,7 +59,7 @@ public class DeviceManager {
         }
     }
 
-    @TargetApi(Build.VERSION_CODES.M)
+    @TargetApi(Build.VERSION_CODES.S)
     public void configureFlutterEngine(FlutterEngine flutterEngine) {
         new MethodChannel(flutterEngine.getDartExecutor().getBinaryMessenger(), CHANNEL).setMethodCallHandler((call, result) -> {
             switch (call.method) {
@@ -78,6 +80,15 @@ public class DeviceManager {
                     List<Map<String, Object>> connectedDevices = getConnectedAudioDevices();
                     result.success(connectedDevices);
                     break;
+                case "isCurrentRouteESPHFP":
+                    String deviceName = call.argument("deviceName");
+                    if (deviceName != null) {
+                        boolean isCurrentRouteESPHFP = isCurrentRouteESPHFP(deviceName);
+                        result.success(isCurrentRouteESPHFP);
+                    } else {
+                        result.error("ERROR", "Device name is required.", null);
+                    }
+                    break;
                 default:
                     result.notImplemented();
                     break;
@@ -86,7 +97,7 @@ public class DeviceManager {
     }
 
 
-    @TargetApi(Build.VERSION_CODES.P)
+    @TargetApi(Build.VERSION_CODES.S)
     private List<Map<String, Object>> getConnectedAudioDevices() {
         AudioDeviceInfo[] devices = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS);
         List<Map<String, Object>> deviceList = new ArrayList<>();
@@ -109,7 +120,7 @@ public class DeviceManager {
         return deviceList;
     }
 
-    @TargetApi(Build.VERSION_CODES.M)
+    @TargetApi(Build.VERSION_CODES.S)
     public boolean setAudioRouteMobile() {
         AudioDeviceInfo[] outputDevices = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS);
 
@@ -138,7 +149,7 @@ public class DeviceManager {
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.S)
+    @TargetApi(Build.VERSION_CODES.S)
     public boolean setAudioRouteESPHFP(String deviceName) {
         AudioDeviceInfo[] outputDevices = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS);
 
@@ -168,5 +179,18 @@ public class DeviceManager {
         }
     }
 
+    @TargetApi(Build.VERSION_CODES.S)
+    private boolean isCurrentRouteESPHFP(String deviceName) {
+        AudioManager audioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
+        AudioDeviceInfo currentDevice = audioManager.getCommunicationDevice();
 
+        if (currentDevice != null && currentDevice.getProductName().equals(deviceName)
+                && currentDevice.getType() == AudioDeviceInfo.TYPE_BLUETOOTH_SCO) {
+            Log.d("AudioRouting", "Current communication device is ESPHFP: " + deviceName);
+            return true;
+        } else {
+            Log.d("AudioRouting", "Current communication device is not ESPHFP or no device set.");
+            return false;
+        }
+    }
 }

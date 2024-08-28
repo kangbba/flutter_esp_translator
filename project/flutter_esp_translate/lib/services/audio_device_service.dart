@@ -74,4 +74,13 @@ class AudioDeviceService {
     }
     return rslts;
   }
+  static Future<bool> isCurrentRouteESPHFP(String deviceName) async {
+    try {
+      final bool result = await _channel.invokeMethod('isCurrentRouteESPHFP', {'deviceName': deviceName});
+      return result;
+    } on PlatformException catch (e) {
+      print("Failed to check audio routing: '${e.message}'.");
+      return false;
+    }
+  }
 }
