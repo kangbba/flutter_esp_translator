@@ -45,6 +45,8 @@ dependencies:
   google_cloud_translation: ^0.0.3
   flutter_speech: ^2.0.0
   flutter_tts: ^3.6.3
+  path_provider: ^2.0.12 # 최신 버전을 확인하고 적용하세요.
+  audioplayers: ^6.1.0
 
   # Design
   loading_animation_widget: ^1.2.0+4

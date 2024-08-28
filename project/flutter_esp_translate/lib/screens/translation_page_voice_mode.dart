@@ -26,6 +26,7 @@ import '../utils/menuconfig.dart';
 import '../utils/utils.dart';
 import '../widgets/recording_btn.dart';
 import '../widgets/translation_area.dart';
+import 'audio_test.dart';
 
 enum ActingOwner{
   nobody,
@@ -142,7 +143,7 @@ class _TranslatePageVoiceModeState extends State<TranslatePageVoiceMode> {
                 ),
               ),
               if(isRoutingTest)
-                buildAudioControlRow(),
+                AudioTest().buildAudioControlRow(context, textToSpeechControl, languageControl),
             ],
           );
         },
@@ -150,70 +151,6 @@ class _TranslatePageVoiceModeState extends State<TranslatePageVoiceMode> {
     );
   }
 
-  Widget buildAudioControlRow() {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: [
-        ElevatedButton(
-          onPressed: () async {
-            try {
-              List<AudioDevice> allConnectedAudioDevices = await AudioDeviceService.getConnectedAudioDevicesByPrefixAndType(PRODUCT_PREFIX, 7);
-              String targetDeviceName = allConnectedAudioDevices.isEmpty ? "" : allConnectedAudioDevices[0].name;
-              AudioDeviceService.setAudioRouteESPHFP(targetDeviceName);
-              print('Audio route set to ESP HFP for device: $targetDeviceName');
-            } catch (e) {
-              print('Error setting audio route to ESP HFP: $e');
-            }
-          },
-          child: Text('단말기 라우팅'),
-        ),
-        ElevatedButton(
-          onPressed: () async {
-            try {
-              AudioDeviceService.setAudioRouteMobile();
-            } catch (e) {
-              print('Error setting audio route to Mobile: $e');
-            }
-          },
-          child: Text('모바일 라우팅'),
-        ),
-        ElevatedButton(
-          onPressed: () async {
-            //   textToSpeechControl.speakWithLanguage("Hello, this is a test speech.", "en_US");
-            textToSpeechControl.speakWithLanguage("성공은 한 번의 거대한 노력의 결과가 아니라, 날마다 꾸준히 긍정적인 행동을 실천한 결과물입니다. 매일 아침 새롭게 다가오는 하루에 의미를 부여하고, 작은 진보라도 착실히 쌓아가겠다는 결심을 통해 만들어집니다.", "ko_KR");
-          },
-          child: Text("수정전 긴 문장 말하기"),
-        ),
-        ElevatedButton(
-          onPressed: () async{
-            List<AudioDevice> allConnectedAudioDevices = await AudioDeviceService.getConnectedAudioDevicesByPrefixAndType(PRODUCT_PREFIX, 7);
-            String targetDeviceName = allConnectedAudioDevices.isEmpty ? "" : allConnectedAudioDevices[0].name;
-            // 여기에 기능 추가 예정
-            textToSpeechControl.speakWithRouteRequest(
-                targetDeviceName,
-                "성공은 한 번의 거대한 노력의 결과가 아니라, 날마다 꾸준히 긍정적인 행동을 실천한 결과물입니다. 매일 아침 새롭게 다가오는 하루에 의미를 부여하고, 작은 진보라도 착실히 쌓아가겠다는 결심을 통해 만들어집니다. ",
-                languageControl.findLanguageItemByTranslateLanguage(TranslateLanguage.korean)!
-            );
-          },
-          child: Text("수정후 긴 문장 말하기"),
-        ),
-        ElevatedButton(
-          onPressed: () async{
-            List<AudioDevice> allConnectedAudioDevices = await AudioDeviceService.getConnectedAudioDevicesByPrefixAndType(PRODUCT_PREFIX, 7);
-            String targetDeviceName = allConnectedAudioDevices.isEmpty ? "" : allConnectedAudioDevices[0].name;
-            // 여기에 기능 추가 예정
-            textToSpeechControl.speakWithRouteRequest2(
-                targetDeviceName,
-                "성공은 한 번의 거대한 노력의 결과가 아니라, 날마다 꾸준히 긍정적인 행동을 실천한 결과물입니다. 매일 아침 새롭게 다가오는 하루에 의미를 부여하고, 작은 진보라도 착실히 쌓아가겠다는 결심을 통해 만들어집니다. ",
-                languageControl.findLanguageItemByTranslateLanguage(TranslateLanguage.korean)!
-            );
-          },
-          child: Text("수정후 긴 문장 말하기2"),
-        ),
-
-      ],
-    );
-  }
   Future<int> getCurrentSdkInt() async {
     DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
     AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
@@ -354,7 +291,7 @@ class _TranslatePageVoiceModeState extends State<TranslatePageVoiceMode> {
   onPressedRecordingBtn(LanguageControl languageControl, ActingOwner btnOwner) async {
 
     //Presetting
-    textToSpeechControl.pause();
+    textToSpeechControl.stop();
     bool isConditionReady = await allConditionCheck();
     if (!isConditionReady) {
       onExitFromActingRoutine();
@@ -478,7 +415,7 @@ class _TranslatePageVoiceModeState extends State<TranslatePageVoiceMode> {
         int sdkInt = await getCurrentSdkInt();
         debugLog("수정된 긴 문장 말하기 SDK : ${sdkInt}");
         if(sdkInt >= 34){
-          await textToSpeechControl.speakWithRouteRequest(targetDeviceName, strToSpeech, toLangItem);
+          await textToSpeechControl.speakWithRouteRequest(context, targetDeviceName, strToSpeech, toLangItem);
         }
         else{
           await textToSpeechControl.speakWithLanguage(strToSpeech.trim(), toLangItem.speechLocaleId);

@@ -8,19 +8,18 @@ enum AudioRoutingMode { mobile, handsFree }
 class AudioDeviceService {
   static const MethodChannel _channel = MethodChannel('samples.flutter.dev/audio');
 
-  static void setAudioRouteMobile() async {
+  static Future<void> setAudioRouteMobile() async {
     try {
-      _channel.invokeMethod('setAudioRouteMobile');
+      await _channel.invokeMethod('setAudioRouteMobile');
   } on PlatformException catch (e) {
       debugLog("Failed to setAudioRouteMobile: '${e.message}'");
       debugLog("Error details: ${e.details}");
     }
   }
-
-  static void setAudioRouteESPHFP(String deviceName) async {
+  static Future<void> setAudioRouteESPHFP(String deviceName) async {
     try {
       debugLog("setAudioRouteESPHFP $deviceName");
-      _channel.invokeMethod('setAudioRouteESPHFP', {'deviceName': deviceName});
+      await _channel.invokeMethod('setAudioRouteESPHFP', {'deviceName': deviceName});
     } on PlatformException catch (e) {
       debugLog("Failed to set audio route: '${e.message}'");
       debugLog("Error details: ${e.details}");

@@ -8,9 +8,10 @@ class PermissionControl {
     // 권한 요청
     var status = await [
       Permission.location,
-      Permission.microphone, // 오디오 권한
+      Permission.microphone,
       Permission.bluetoothScan,
-      Permission.bluetoothConnect
+      Permission.bluetoothConnect,
+      Permission.audio
     ].request();
 
     // 모든 권한이 승인되었는지 확인
