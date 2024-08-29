@@ -45,12 +45,14 @@ dependencies:
   google_cloud_translation: ^0.0.3
   flutter_speech: ^2.0.0
   flutter_tts: ^3.6.3
-  path_provider: ^2.0.12 # 최신 버전을 확인하고 적용하세요.
-  audioplayers: ^6.1.0
+  path_provider: ^2.0.12
 
   # Design
   loading_animation_widget: ^1.2.0+4
   simple_ripple_animation: ^0.0.7
+
+  # Publish
+  flutter_launcher_icons: ^0.11.0
 
 dev_dependencies:
   flutter_test:
@@ -104,3 +106,8 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+flutter_icons:
+  android: true
+  ios: false
+  image_path: "assets/app_icon.png"  # 사용할 아이콘 경로를 지정합니다.

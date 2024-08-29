@@ -1,11 +1,6 @@
 package com.translate.flutter_esp_translate;
 
 import static android.content.Context.AUDIO_SERVICE;
-
-import java.io.IOException;
-import java.io.OutputStream;
-
-import android.bluetooth.BluetoothSocket;
 import android.content.Context;
 import android.media.AudioDeviceCallback;
 import android.media.AudioDeviceInfo;
@@ -13,13 +8,13 @@ import android.media.AudioFocusRequest;
 import android.media.AudioManager;
 import android.os.Build;
 import android.util.Log;
+
 import androidx.annotation.RequiresApi;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Timer;
-import java.util.TimerTask;
 
 import io.flutter.embedding.engine.FlutterEngine;
 import io.flutter.plugin.common.MethodChannel;
@@ -29,9 +24,7 @@ public class DeviceManager {
     private static final String CHANNEL = "samples.flutter.dev/audio";
     private Context context;
     private AudioManager.OnAudioFocusChangeListener audioFocusChangeListener;
-
-    // Keep-Alive 타이머 설정 및 실행
-    private Timer keepAliveTimer;
+    private boolean isModeHFP;
 
 
     @RequiresApi(Build.VERSION_CODES.S)
@@ -48,6 +41,7 @@ public class DeviceManager {
                         Log.d("AudioDeviceCallback", "Audio device added: " + device.getProductName());
                     }
                 }
+
                 @Override
                 public void onAudioDevicesRemoved(AudioDeviceInfo[] removedDevices) {
                     for (AudioDeviceInfo device : removedDevices) {
@@ -60,6 +54,13 @@ public class DeviceManager {
         // OnCommunicationDeviceChangedListener 설정
         audioManager.addOnCommunicationDeviceChangedListener(Runnable::run, device -> {
             Log.d("DeviceManager", "Communication device changed: " + (device != null ? device.getProductName() : "None"));
+//            if(isModeHFP){
+//
+//                Log.d("DeviceManager", "강제로 유지 시도");
+//                audioManager.startBluetoothSco();
+//                audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
+//                audioManager.setSpeakerphoneOn(false); // call AFTER setMode
+//            }
         });
 
         // AudioFocusChangeListener 설정
@@ -144,8 +145,10 @@ public class DeviceManager {
 
         return deviceList;
     }
+
     @RequiresApi(Build.VERSION_CODES.S)
     public boolean setAudioRouteMobile() {
+        isModeHFP = false;
         AudioDeviceInfo[] outputDevices = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS);
 
         for (AudioDeviceInfo device : outputDevices) {
@@ -172,8 +175,11 @@ public class DeviceManager {
             return false;
         }
     }
+
+
     @RequiresApi(Build.VERSION_CODES.S)
     public boolean setAudioRouteESPHFP(String deviceName) {
+        isModeHFP = true;
         AudioDeviceInfo[] outputDevices = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS);
 
         for (AudioDeviceInfo device : outputDevices) {
@@ -182,7 +188,7 @@ public class DeviceManager {
 
         AudioDeviceInfo selectedDevice = null;
         for (AudioDeviceInfo device : outputDevices) {
-            if (device.getProductName().equals(deviceName) && device.getType() == AudioDeviceInfo.TYPE_BLUETOOTH_SCO) {
+            if (device.getProductName().equals(deviceName) && device.getType() == AudioDeviceInfo.TYPE_BLUETOOTH_SCO) { // Example type 7
                 selectedDevice = device;
                 break;
             }
@@ -192,85 +198,16 @@ public class DeviceManager {
             System.out.println("Attempting to set audio route to device " + deviceName + ": Device ID: " + selectedDevice.getId());
             audioManager.startBluetoothSco();
             audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
+
             audioManager.setSpeakerphoneOn(false); // call AFTER setMode
             audioManager.setCommunicationDevice(selectedDevice);
             System.out.println("Audio route successfully set to " + selectedDevice.getProductName());
-
-            // Keep-Alive 시작
-            startKeepAlive();
-
             return true;
         } else {
             System.out.println("Failed to find a type 7 device with model name '" + deviceName + "'.");
             return false;
         }
     }
-
-    public void startKeepAlive(BluetoothSocket bluetoothSocket) {
-        if (keepAliveTimer != null) {
-            keepAliveTimer.cancel();  // 기존 타이머가 있다면 중지
-        }
-
-        keepAliveTimer = new Timer();
-        keepAliveTimer.scheduleAtFixedRate(new TimerTask() {
-            @Override
-            public void run() {
-                try {
-                    if (bluetoothSocket != null && bluetoothSocket.isConnected()) {
-                        OutputStream outputStream = bluetoothSocket.getOutputStream();
-                        // AT Command 전송 예시 (HFP Keep-Alive를 위해 간단한 상태 확인 명령)
-                        outputStream.write("AT\r".getBytes());
-                        outputStream.flush();
-                        Log.d("KeepAlive", "AT command sent to maintain HFP connection.");
-                    } else {
-                        Log.e("KeepAlive", "Bluetooth socket is not connected.");
-                    }
-                } catch (IOException e) {
-                    Log.e("KeepAlive", "Error sending keep-alive command: " + e.getMessage());
-                    // 필요 시 타이머를 중지하거나 재연결 시도 로직 추가 가능
-                }
-            }
-        }, 0, 1000); // 1초마다 Keep-Alive 실행
-    }
-
-    public void stopKeepAlive() {
-        if (keepAliveTimer != null) {
-            keepAliveTimer.cancel();
-            keepAliveTimer = null;
-        }
-    }
-
-//
-//    @RequiresApi(Build.VERSION_CODES.S)
-//    public boolean setAudioRouteESPHFP(String deviceName) {
-//        AudioDeviceInfo[] outputDevices = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS);
-//
-//        for (AudioDeviceInfo device : outputDevices) {
-//            System.out.println("Device type: " + device.getType() + ", Product name: " + device.getProductName() + ", ID: " + device.getId() + ", Address: " + device.getAddress());
-//        }
-//
-//        AudioDeviceInfo selectedDevice = null;
-//        for (AudioDeviceInfo device : outputDevices) {
-//            if (device.getProductName().equals(deviceName) && device.getType() == AudioDeviceInfo.TYPE_BLUETOOTH_SCO) { // Example type 7
-//                selectedDevice = device;
-//                break;
-//            }
-//        }
-//
-//        if (selectedDevice != null) {
-//            System.out.println("Attempting to set audio route to device " + deviceName + ": Device ID: " + selectedDevice.getId());
-//            audioManager.startBluetoothSco();
-//            audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
-//
-//            audioManager.setSpeakerphoneOn(false); // call AFTER setMode
-//            audioManager.setCommunicationDevice(selectedDevice);
-//            System.out.println("Audio route successfully set to " + selectedDevice.getProductName());
-//            return true;
-//        } else {
-//            System.out.println("Failed to find a type 7 device with model name '" + deviceName + "'.");
-//            return false;
-//        }
-//    }
 
     @RequiresApi(Build.VERSION_CODES.S)
     private boolean isCurrentRouteESPHFP(String deviceName) {

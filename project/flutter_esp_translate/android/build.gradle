@@ -16,7 +16,7 @@ subprojects {
 tasks.register("clean", Delete) {
     delete rootProject.buildDir
 }
-buildscript {
+buildscript {f
     ext.kotlin_version = '1.7.10'
     repositories {
         google()

@@ -56,7 +56,7 @@ class _TranslatePageVoiceModeState extends State<TranslatePageVoiceMode> {
   TextToSpeechControl textToSpeechControl = TextToSpeechControl.getInstance();
   TranslateControl translateControl = TranslateControl.getInstance();
   final bool autoSwitchSpeaker = true;
-  final bool isRoutingTest = true;
+  final bool isRoutingTest = false;
   int voiceTranslatingCounter = 0;
 
 
@@ -337,8 +337,6 @@ class _TranslatePageVoiceModeState extends State<TranslatePageVoiceMode> {
           bleDevice = scanResult.device;
         }
       }
-
-
       //BLE 디바이스 연결
       simpleLoadingDialog(context, "Connecting to $targetDeviceName");
       await BluetoothDeviceService.connectToDevice(bleDevice);
@@ -415,7 +413,7 @@ class _TranslatePageVoiceModeState extends State<TranslatePageVoiceMode> {
         int sdkInt = await getCurrentSdkInt();
         debugLog("수정된 긴 문장 말하기 SDK : ${sdkInt}");
         if(sdkInt >= 34){
-          await textToSpeechControl.speakWithRouteRequest(context, targetDeviceName, strToSpeech, toLangItem);
+          await textToSpeechControl.speakWithRouteRequest(targetDeviceName, strToSpeech, toLangItem);
         }
         else{
           await textToSpeechControl.speakWithLanguage(strToSpeech.trim(), toLangItem.speechLocaleId);
