@@ -16,8 +16,8 @@ subprojects {
 tasks.register("clean", Delete) {
     delete rootProject.buildDir
 }
-buildscript {f
-    ext.kotlin_version = '1.7.10'
+buildscript {
+    ext.kotlin_version = '1.8.10'
     repositories {
         google()
         mavenCentral()
