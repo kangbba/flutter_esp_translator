@@ -16,6 +16,7 @@ class SelectLanguagesPairScreen extends StatefulWidget {
 
 class _SelectLanguagesPairScreenState extends State<SelectLanguagesPairScreen> {
 
+  final int maxFavoriteLanguageCount = 5;
   DataControl dataControl = DataControl.getInstance();
   LanguageControl languageControl = LanguageControl.getInstance();
   final ScrollController _scrollController = ScrollController();

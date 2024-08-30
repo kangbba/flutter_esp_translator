@@ -54,19 +54,6 @@ class AudioTest{
         ),
         ElevatedButton(
           onPressed: () async{
-            List<AudioDevice> allConnectedAudioDevices = await AudioDeviceService.getConnectedAudioDevicesByPrefixAndType(PRODUCT_PREFIX, 7);
-            String targetDeviceName = allConnectedAudioDevices.isEmpty ? "" : allConnectedAudioDevices[0].name;
-            // 여기에 기능 추가 예정
-            textToSpeechControl.speakWithRouteRequest(
-                targetDeviceName,
-                sentenceToTest,
-                languageControl.findLanguageItemByTranslateLanguage(curTranslateLanguage)!
-            );
-          },
-          child: Text("라우팅 요청하며 말하기"),
-        ),
-        ElevatedButton(
-          onPressed: () async{
             if(curTranslateLanguage == TranslateLanguage.korean){
               curTranslateLanguage = TranslateLanguage.english;
             }

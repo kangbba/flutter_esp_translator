@@ -9,7 +9,7 @@ class BluetoothDeviceService {
 
 
 
-  static Future<BluetoothDevice?> scanAvailableBleDevice(String productName) async {
+  static Future<BluetoothDevice?> scanPreConnectedBleDevice(String productName) async {
     // Bonded Devices 검색
     List<BluetoothDevice> bondedDevices = await FlutterBluePlus.bondedDevices;
     for (BluetoothDevice device in bondedDevices) {

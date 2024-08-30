@@ -8,6 +8,8 @@ import '../utils/utils.dart';
 class DataControl with ChangeNotifier {
   late SharedPreferences _prefs;
 
+  final int maxRecentLanguagePairs = 3;
+
   bool isInitialized = false;
   static DataControl? _instance;
 

@@ -297,21 +297,11 @@ class _TranslatePageVoiceModeState extends State<TranslatePageVoiceMode> {
       onExitFromActingRoutine();
       return;
     }
-    bool useTranslationOnly = false;
     List<AudioDevice> allConnectedAudioDevices = await AudioDeviceService.getConnectedAudioDevicesByPrefixAndType(PRODUCT_PREFIX, 7);
     if (allConnectedAudioDevices.isEmpty) {
-      bool? resp = await askDialogRow(context, Text("No nearby devices, Would you like to perform only the translation?"), "Yes", "No", 80);
-      if(resp == true){
-        useTranslationOnly = true;
-      }
-      else if(resp == false){
-        onExitFromActingRoutine();
-        return;
-      }
-      else{
-        onExitFromActingRoutine();
-        return;
-      }
+      await simpleConfirmDialogA(context, "No nearby audio devices", "OK");
+      onExitFromActingRoutine();
+      return;
     }
     else if (allConnectedAudioDevices.length >= 2) {
       await simpleConfirmDialogA(context, "Multiple devices found, Please connect one device only", "OK");
@@ -322,29 +312,29 @@ class _TranslatePageVoiceModeState extends State<TranslatePageVoiceMode> {
     bool isMine = btnOwner == ActingOwner.me;
     //Finding valid ble device by HFP device name
     String targetDeviceName = allConnectedAudioDevices.isEmpty ? "" : allConnectedAudioDevices[0].name;
-    BluetoothDevice? bleDevice = await BluetoothDeviceService.scanAvailableBleDevice(targetDeviceName);
-    if(!useTranslationOnly){
-      if (bleDevice == null) {
-        simpleLoadingDialog(context, "Searching for nearby devices");
-        ScanResult? scanResult = await BluetoothDeviceService.scanNearBleDevicesByProductName(targetDeviceName, 5);
-        Navigator.of(context).pop();
-        if (scanResult == null) {
-          await simpleConfirmDialogA(context, "No devices found nearby, Would you like to perform only the translation?", "OK");
-          onExitFromActingRoutine();
-          return;
-        }
-        else{
-          bleDevice = scanResult.device;
-        }
+    //이미 연결된 BleDevice 검사
+    BluetoothDevice? targetBleDevice = await BluetoothDeviceService.scanPreConnectedBleDevice(targetDeviceName);
+    if (targetBleDevice == null) {
+      simpleLoadingDialog(context, "Searching for nearby devices");
+      //이미 연결된 BleDevice 없는 경우 주변 기기 검색
+      ScanResult? scanResult = await BluetoothDeviceService.scanNearBleDevicesByProductName(targetDeviceName, 5);
+      Navigator.of(context).pop();
+      if (scanResult == null) {
+        await simpleConfirmDialogA(context, "No devices found nearby", "OK");
+        onExitFromActingRoutine();
+        return;
       }
-      //BLE 디바이스 연결
-      simpleLoadingDialog(context, "Connecting to $targetDeviceName");
-      await BluetoothDeviceService.connectToDevice(bleDevice);
-      if(mounted){
-        Navigator.of(context).pop();
+      else{
+        targetBleDevice = scanResult.device;
       }
-      await Future.delayed(const Duration(milliseconds: 500));
     }
+    //BLE 디바이스 연결
+    simpleLoadingDialog(context, "Connecting to $targetDeviceName");
+    await BluetoothDeviceService.connectToDevice(targetBleDevice);
+    if(mounted){
+      Navigator.of(context).pop();
+    }
+    await Future.delayed(const Duration(milliseconds: 500));
 
     //말하기를 위한 라우팅 제어
     if (isMine) {
@@ -378,56 +368,33 @@ class _TranslatePageVoiceModeState extends State<TranslatePageVoiceMode> {
     }
     setState(() {});
 
-    //해석한 내용을 스피커로 출력
-    if(!useTranslationOnly){
-
-      //BLE 디바이스로 전송
-      String translatedStr = languageControl.yourStr.trim();
-      List<int> msgBytes = utf8.encode(translatedStr);
-      debugLog("*MSG DATA LENGTH : ${msgBytes.length}");
-      List<int> truncatedBytes;
-      if (msgBytes.length > 500) {
-        truncatedBytes = msgBytes.sublist(0, 500);
-      } else {
-        truncatedBytes = msgBytes;
-      }
-      LanguageItem targetLanguageItem = languageControl.nowYourLanguageItem;
-      String truncatedStr = utf8.decode(truncatedBytes);
-      String fullMsgToSend = "${targetLanguageItem.uniqueId}:$truncatedStr;";
-      await BluetoothDeviceService.writeMsgToBleDevice(bleDevice, fullMsgToSend);
-      await Future.delayed(const Duration(milliseconds: 500));
-
-      if (isMine) {
-        AudioDeviceService.setAudioRouteESPHFP(targetDeviceName);
-      } else {
-        AudioDeviceService.setAudioRouteMobile();
-      }
-      await Future.delayed(const Duration(milliseconds: 500));
+    //BLE 디바이스로 전송
+    String translatedStr = languageControl.yourStr.trim();
+    List<int> msgBytes = utf8.encode(translatedStr);
+    debugLog("*MSG DATA LENGTH : ${msgBytes.length}");
+    List<int> truncatedBytes;
+    if (msgBytes.length > 500) {
+      truncatedBytes = msgBytes.sublist(0, 500);
+    } else {
+      truncatedBytes = msgBytes;
     }
+    LanguageItem targetLanguageItem = languageControl.nowYourLanguageItem;
+    String truncatedStr = utf8.decode(truncatedBytes);
+    String fullMsgToSend = "${targetLanguageItem.uniqueId}:$truncatedStr;";
+    await BluetoothDeviceService.writeMsgToBleDevice(targetBleDevice, fullMsgToSend);
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    if (isMine) {
+      AudioDeviceService.setAudioRouteESPHFP(targetDeviceName);
+    } else {
+      AudioDeviceService.setAudioRouteMobile();
+    }
+    await Future.delayed(const Duration(milliseconds: 500));
 
     //perform text to speech
     String strToSpeech = isMine ? languageControl.yourStr : languageControl.myStr;
     LanguageItem toLangItem = isMine ? languageControl.nowYourLanguageItem : languageControl.nowMyLanguageItem;
-    if(!useTranslationOnly){
-      if(isMine){
-        int sdkInt = await getCurrentSdkInt();
-        debugLog("수정된 긴 문장 말하기 SDK : ${sdkInt}");
-        if(sdkInt >= 34){
-          await textToSpeechControl.speakWithRouteRequest(targetDeviceName, strToSpeech, toLangItem);
-        }
-        else{
-          await textToSpeechControl.speakWithLanguage(strToSpeech.trim(), toLangItem.speechLocaleId);
-        }
-      }
-      else{
-        debugLog("그냥 말하기");
-        await textToSpeechControl.speakWithLanguage(strToSpeech.trim(), toLangItem.speechLocaleId);
-      }
-    }
-    else{
-      debugLog("그냥 말하기");
-      await textToSpeechControl.speakWithLanguage(strToSpeech.trim(), toLangItem.speechLocaleId);
-    }
+    await textToSpeechControl.speakWithLanguage(strToSpeech.trim(), toLangItem.speechLocaleId);
     isRoutinePlaying = false;
 
     // 자동 전환 기능 추가

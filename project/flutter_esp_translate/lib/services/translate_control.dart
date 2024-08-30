@@ -30,6 +30,7 @@ class TranslateControl with ChangeNotifier
   }
 
   Future<String> translateByAvailablePlatform (String fromStr, LanguageItem fromLanguageItem, LanguageItem toLanguageItem, int timeoutMilliSec) async{
+    const int inputStrMaxLength = 3000;
     if(fromStr.length > inputStrMaxLength){
       debugLog("3000자 이상이어서 취소");
       return '';
