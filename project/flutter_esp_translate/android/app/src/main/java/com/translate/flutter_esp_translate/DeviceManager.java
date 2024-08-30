@@ -24,7 +24,6 @@ public class DeviceManager {
     private static final String CHANNEL = "samples.flutter.dev/audio";
     private Context context;
     private AudioManager.OnAudioFocusChangeListener audioFocusChangeListener;
-    private boolean isModeHFP;
 
 
     @RequiresApi(Build.VERSION_CODES.S)
